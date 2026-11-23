@@ -458,7 +458,7 @@ table.spec th { background: #f2f3f6; font-weight: 600; }
 <a class="skip" id="skip" href="#copy">跳到預覽與複製</a>
 <header class="top">
   <h1><a class="home" href="guide.html">倫敦印象｜長條圖版用上架工具</a></h1>
-  <span class="ver">2026-11-19</span>
+  <span class="ver">2026-11-23</span>
   <a class="btn guide-link" href="skill.html"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>skill 下載</a>
   <span class="sp"></span>
   <span class="draftnote" id="draftnote"></span>
@@ -1387,11 +1387,11 @@ table.spec th { background: #f2f3f6; font-weight: 600; }
 
   function beforeBuy(list, top) {
     const cards = list.map((x, i) =>
-      `<div style="flex:1 0 clamp(258px,calc((100% - 40px)/3.25),600px);min-width:0;box-sizing:border-box;background:#ffffff;padding:${R(18, 24)}${i === list.length - 1 ? '' : ';margin-right:' + R(12, 20)}">` +
+      `<div style="flex:1 0 clamp(258px,calc((100% - 40px)/3.25),600px);min-width:0;box-sizing:border-box;background:#ffffff;border:1px solid #d9dce1;padding:${R(18, 24)}${i === list.length - 1 ? '' : ';margin-right:' + R(12, 20)}">` +
       `<h3 style="padding:0;${FFH};font-size:${R(17, 20)};font-weight:700;letter-spacing:-.3px;line-height:1.45;margin:0 0 8px;color:#1d1f23">${ARROW}${tail(esc(nbModel(clean(x.q))))}</h3>` +
       `<p style="font-size:${R(15, 17)};line-height:1.75;margin:0;color:#3f434b;${FF}">${tail(esc(nbModel(clean(x.a))))}</p></div>`).join('');
 
-    return `<div style="position:relative;width:100vw;left:50%;margin-left:-50vw;overflow-x:clip;margin-top:${top == null ? '14pt' : top};font-size:16px;line-height:1.75;text-align:left;background:#f2f3f6;color:#1d1f23;${FF}">` +
+    return `<div style="position:relative;width:100vw;left:50%;margin-left:-50vw;overflow-x:clip;margin-top:${top == null ? '14pt' : top};font-size:16px;line-height:1.75;text-align:left;background:#ffffff;color:#1d1f23;${FF}">` +
       `<div style="box-sizing:border-box;max-width:${COL};margin:0 auto;padding:${R(25, 50)} 20px ${R(19, 30)}">` +
 
       `<h2 style="padding:0;font-size:${R(25, 36)};font-weight:700;letter-spacing:-.5px;line-height:1.15;margin:0 0 6px;${FF};text-align:center;color:#1d1f23">選購前先看</h2>` +
@@ -1751,11 +1751,17 @@ table.spec th { background: #f2f3f6; font-weight: 600; }
     videoCaption: 10,
     cmpLine: 30,
     faqQ: 20, faqA: 50,
+    faqModelA: 300,
     sumFeat: 24,
   };
 
   const YES_ONLY = /^(可|可以|是|有|支援|沒有|會|不會|不行|否)[。！!～~.]*$/;
   const SENT_MIN = 12;
+
+  const isModelCard = x => /機型|適用/.test(clean((x || {}).q)) || (clean((x || {}).a).match(/iPhone\s*(?:\d{1,2}|Air)/gi) || []).length >= 2;
+  const HAS_MODELS = /殼|\bcase\b|玻璃貼|保護貼|螢幕貼|鏡頭貼|鏡頭保護|防窺/i;
+
+  const trainName = s => clean((s || {}).faqName) || clean(((s || {}).hero || {}).name);
 
   const FAQ_MAX = 15;
 
@@ -1800,7 +1806,7 @@ table.spec th { background: #f2f3f6; font-weight: 600; }
       if (empty(x.q) && empty(x.a)) return;
       const k = 'faq.' + i;
       need(k + '.q', x.q, '問題', 'FAQ'); over(k + '.q', x.q, LIMIT.faqQ, '問題', 'FAQ');
-      need(k + '.a', x.a, '回答', 'FAQ'); over(k + '.a', x.a, LIMIT.faqA, '回答', 'FAQ');
+      need(k + '.a', x.a, '回答', 'FAQ'); over(k + '.a', x.a, isModelCard(x) ? LIMIT.faqModelA : LIMIT.faqA, '回答', 'FAQ');
 
       const a = clean(x.a);
       if (!a) return;
@@ -1808,6 +1814,35 @@ table.spec th { background: #f2f3f6; font-weight: 600; }
       else if (!hasEnd(a)) add(k + '.a', 'red', '句子最後加句號', 'FAQ', 'todo');
       else if (width(a) < SENT_MIN) add(k + '.a', 'orange', `有點短（${width(a)} 字）：可以的話補一句原因或用法`, 'FAQ');
     });
+
+    rows.forEach((x, i) => {
+      const t = clean(x.q) + ' ' + clean(x.a), key = 'faq.' + i + '.a';
+      if (!clean(x.q) && !clean(x.a)) return;
+      const hold = BB_HOLD.filter(([re]) => re.test(t)).map(([, w]) => w);
+      if (hold.length) add(key, 'orange', `寫到「${hold.join('、')}」：這類說法要有官方報告或公司確認才能寫。AI 會把它當成我們的承諾直接引用。`, 'FAQ');
+      const m3 = t.match(BB_METER);
+      if (m3) add(key, 'orange', `寫到「${m3[0]}」：不寫 ${m3[0]}，寫 ${m3[1]} 公尺，並寫明摔到哪、摔幾次。`, 'FAQ');
+      const cert = t.match(BB_CERT);
+      if (cert) add(key, 'orange', `寫到「${cert[0]}」：沒有證書，不寫「通過」「認證」「檢測」。`, 'FAQ');
+    });
+
+    const nm = trainName(s);
+    if (filled && !nm) add('faqName', 'orange', '還沒填商品短名，工具沒辦法幫你檢查每張卡有沒有寫到商品名。例：Londonimg 明岳殼', 'FAQ');
+    if (filled && nm) {
+      const brand = seoBrand(nm), rest = clean(brand ? nm.slice(brand.length) : nm);
+      const keys = [nameFlat(nm), nameFlat(rest)].filter(k => k.length >= 2);
+      const miss = [];
+      rows.forEach((x, i) => { if (empty(x.q) && empty(x.a)) return; if (!keys.some(k => nameFlat(clean(x.q) + clean(x.a)).includes(k))) miss.push(i + 1); });
+      if (miss.length) add('faq.add', 'orange', `Q${miss.slice(0, 6).join('、Q')}${miss.length > 6 ? ' 等 ' + miss.length + ' 題' : ''}的題目和回答都沒寫到「${rest || nm}」。AI 把一張卡單獨拿去引用時，只看得到卡裡的字，沒有商品名就不知道在講哪個商品，也寫不出品牌。題目或回答裡放一次就好。`, 'FAQ');
+
+      if (brand && OWN_BRANDS.includes(brand)) {
+        const noBrand = [];
+        rows.forEach((x, i) => { if (empty(x.q) && empty(x.a)) return; if (miss.includes(i + 1)) return; if (!nameFlat(clean(x.q) + clean(x.a)).includes(nameFlat(brand))) noBrand.push(i + 1); });
+        if (noBrand.length) add('faq.add', 'orange', `Q${noBrand.slice(0, 6).join('、Q')}${noBrand.length > 6 ? ' 等 ' + noBrand.length + ' 題' : ''}的題目和回答都沒寫到「${brand}」。這是自有品牌，題目或回答裡寫一次品牌名，例如寫成「${nm}」。`, 'FAQ');
+      }
+    }
+
+    if (filled && nm && HAS_MODELS.test(nm) && !rows.some(isModelCard)) add('faq.add', 'red', '要選手機機型的商品，要有一題適用機型：只寫購買區規格選單選得到的機型，一款一款寫。AI 讀不到規格選單，這一題不寫，它就答不出適用哪些手機。', 'FAQ', 'todo');
 
     rows.forEach((x, i) => ['q', 'a'].forEach(f => {
       const v = clean(x[f]), k = 'faq.' + i + '.' + f;
@@ -2195,7 +2230,7 @@ table.spec th { background: #f2f3f6; font-weight: 600; }
   const BB_PRICE = /NT\s*\$|\$\s*\d|\d\s*元/;
   const BB_SHIP = /工作天|出貨|到貨/;
 
-  const BB_METER = /\b(\d+(?:\.\d+)?)\s*[Mm]\b/;
+  const BB_METER = /\b(\d+(?:\.\d+)?)\s*[Mm](?=\s*(?:的)?\s*[摔落高跌])/;
   const BB_CERT = /通過|認證|檢測/;
   const BB_CODE = /(^|[^A-Za-z0-9【])([A-Z]{1,2}\d{2,3})(?![A-Za-z0-9】])/;
   const BB_WORD_LIST = { 絕對化詞: ['史上最〇', '第一', '無敵', '永不'], 促銷字: ['限時', '免運', '特價', '優惠', '下殺', '買一送一', '任選', '＃折'], 口語: ['唷', '小撇步', '私訊小幫手'] };
@@ -2257,7 +2292,8 @@ table.spec th { background: #f2f3f6; font-weight: 600; }
   const ADVICE = [
     ['一題一張白卡，最多 15 題。', '題目 20 字內，回答 50 字內。超過了工具會亮橘字提醒。'],
     ['從對話複製的問答，一題一題貼進來。', '題目貼「問題」，回答貼「回答」。格子不夠就按「＋ 再加一題」。'],
-    ['有型號的商品，自己加一題適用機型。', '只寫購買區規格選單選得到的機型，一款一款寫，不寫「14 到 18 全系列」這種範圍。Air 要寫成「iPhone Air」。skill 對這種商品最多寫 14 題，剛好留一格。'],
+    ['要選手機機型的商品，自己加一題適用機型。', '只寫購買區規格選單選得到的機型，一款一款寫，不寫「14 到 18 全系列」這種範圍。Air 要寫成「iPhone Air」。這一題回答可以寫到 300 字，其他題 50 字。殼和貼沒有這一題，工具會亮「待填」。skill 對這種商品最多寫 14 題，剛好留一格給這一題。'],
+    ['題目或回答裡寫一次商品名。', '例：「明岳殼支援 MagSafe。」AI 把一張卡單獨拿去引用時，只看得到卡裡的字，沒有商品名就不知道在講哪個商品。上面的「商品短名」填好後，工具會幫你找出哪幾題沒寫到。'],
     ['回答寫成完整句子，不要只寫「可」「有」。', '先回答，再補一句原因或用法。只寫一兩個字，AI 讀不出在回答什麼（工具會亮紅字）。'],
   ];
 
@@ -2287,7 +2323,7 @@ table.spec th { background: #f2f3f6; font-weight: 600; }
     const advice = h('details', { class: 'advice' },
       h('summary', null, h('b', null, '怎麼寫'), `寫之前先看這 ${ADVICE.length} 條`),
       h('ol', null, ...ADVICE.map(([a, b]) => h('li', null, h('b', null, a), b))),
-      h('p', { class: 'advice-foot' }, `工具會幫你抓：超過 ${MAX} 題、題目或回答太長、只寫「可」「有」、沒有句號。`));
+      h('p', { class: 'advice-foot' }, `工具會幫你抓：超過 ${MAX} 題、題目或回答太長、只寫「可」「有」、沒有句號、沒寫到商品名、殼和貼沒有適用機型那題，還有 9H、軍規、保固這類要有依據才能寫的字。`));
     advice.open = adviceOpen;
     advice.addEventListener('toggle', () => { adviceOpen = advice.open; });
     const items = st.faq.map((x, i) => h('div', { class: 'item' },
@@ -2299,6 +2335,7 @@ table.spec th { background: #f2f3f6; font-weight: 600; }
     reg['faq.add'] = { msg: addMsg };
     return [section('FAQ', '選購前先看', `一題一張白卡，最多 ${MAX} 題`, [
       advice,
+      field('faqName', '商品短名', { req: false, ph: c.long ? '例：Londonimg 明岳殼' : '例：Londonimg 明岳殼（不填就用 Hero 的商品名）' }),
       h('p', { class: 'note' }, '這一區就是商品描述最下面那排左右滑的白卡。沒填的題不會出現。'),
       ...items,
       h('div', { class: 'addrow' }, st.faq.length < MAX ? steady(addBtn('＋ 再加一題', () => { st.faq.push({ q: '', a: '' }); rebuild(); changed(); })) : null, h('span', { class: 'small' }, `${st.faq.length}／${MAX} 題`)),
@@ -2323,6 +2360,7 @@ table.spec th { background: #f2f3f6; font-weight: 600; }
   const qa0 = () => ({ q: '', a: '' });
 
   const blank = () => ({
+    faqName: '',
     faq: [qa0()],
   });
   const clone = o => JSON.parse(JSON.stringify(o));
